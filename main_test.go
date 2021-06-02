@@ -113,8 +113,17 @@ func Test_getTaskName(t *testing.T) {
 	expectedName := "toto"
 
 	alloc := &api.Allocation{
-		TaskGroup: "tg-1",
-		Job:       job,
+		TaskGroup: "tg",
+		Job: &api.Job{
+			TaskGroups: []*api.TaskGroup{
+				{
+					Name: stringToPtr("tg"),
+					Tasks: []*api.Task{
+						api.NewTask("toto", "docker"),
+					},
+				},
+			},
+		},
 	}
 
 	res, err := getTaskName(alloc)
