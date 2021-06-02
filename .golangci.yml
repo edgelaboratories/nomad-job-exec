@@ -1,11 +1,7 @@
 linters:
   enable-all: true
   disable:
-    - dupl
     - exhaustivestruct
-    - forbidigo
-    - gochecknoglobals
-    - gochecknoinits
     - goerr113
     - lll
     - wrapcheck
@@ -17,4 +13,5 @@ issues:
     # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:
+        - gochecknoglobals
         - testpackage
