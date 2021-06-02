@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func main() { // nolint: cyclop, funlen
+func main() { // nolint: cyclop, funlen, gocognit
 	jobID := flag.String("job", "", "Job ID")
 	taskID := flag.String("task", "", "Task ID")
 	cmd := flag.String("command", "", "Command to execute on allocations")
@@ -66,7 +66,7 @@ func main() { // nolint: cyclop, funlen
 		cancel()
 	}()
 
-	execOutputCh := make(chan execOutput, len(allocations))
+	execOutputCh := make(chan *execOutput, len(allocations))
 	done := make(chan bool, 1)
 
 	go func() {
@@ -121,11 +121,18 @@ func main() { // nolint: cyclop, funlen
 			}
 
 			eg.Go(func() error {
-				return executor{
+				output, err := executor{
 					client:       client,
 					queryOptions: &api.QueryOptions{},
 					logger:       logger,
-				}.exec(ctx, allocID, *taskID, splitCommand, execOutputCh)
+				}.exec(ctx, allocID, *taskID, splitCommand)
+				if err != nil {
+					return err
+				}
+
+				execOutputCh <- output
+
+				return nil
 			})
 		}
 	}

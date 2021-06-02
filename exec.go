@@ -16,19 +16,19 @@ type executor struct {
 	logger       *log.Entry
 }
 
-func (e executor) exec(ctx context.Context, allocID, taskID string, cmd []string, outputCh chan<- execOutput) error {
+func (e executor) exec(ctx context.Context, allocID, taskID string, cmd []string) (*execOutput, error) {
 	e.logger.Infof("retrieving allocation info")
 
 	alloc, _, err := e.client.Allocations().Info(allocID, e.queryOptions)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve allocation info for %s: %w", allocID, err)
+		return nil, fmt.Errorf("failed to retrieve allocation info for %s: %w", allocID, err)
 	}
 
 	e.logger.Infof("getting info for node %s", alloc.NodeID)
 
 	node, _, err := e.client.Nodes().Info(alloc.NodeID, e.queryOptions)
 	if err != nil {
-		return fmt.Errorf("failed to get the node info for id %s: %w", alloc.NodeID, err)
+		return nil, fmt.Errorf("failed to get the node info for id %s: %w", alloc.NodeID, err)
 	}
 
 	e.logger.Info("executing command")
@@ -37,12 +37,12 @@ func (e executor) exec(ctx context.Context, allocID, taskID string, cmd []string
 
 	_, err = e.client.Allocations().Exec(ctx, alloc, taskID, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, e.queryOptions)
 	if err != nil {
-		return fmt.Errorf("failed to exec command on allocation %s: %w", alloc.ID, err)
+		return nil, fmt.Errorf("failed to exec command on allocation %s: %w", alloc.ID, err)
 	}
 
 	e.logger.Info("command executed")
 
-	outputCh <- execOutput{
+	return &execOutput{
 		allocID: alloc.ID,
 		node: &nodeInfo{
 			id:   node.ID,
@@ -51,9 +51,7 @@ func (e executor) exec(ctx context.Context, allocID, taskID string, cmd []string
 		},
 		stdout: bufStdout.String(),
 		stderr: bufStderr.String(),
-	}
-
-	return nil
+	}, nil
 }
 
 type execOutput struct {
