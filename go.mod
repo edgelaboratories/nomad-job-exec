@@ -1,4 +1,4 @@
-module github.com/edgelaboratories/nomad-alloc-exec
+module github.com/edgelaboratories/nomad-job-exec
 
 go 1.16
 

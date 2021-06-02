@@ -16,14 +16,7 @@ type executor struct {
 	logger       *log.Entry
 }
 
-func (e executor) exec(ctx context.Context, allocID, taskID string, cmd []string) (*execOutput, error) {
-	e.logger.Infof("retrieving allocation info")
-
-	alloc, _, err := e.client.Allocations().Info(allocID, e.queryOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve allocation info for %s: %w", allocID, err)
-	}
-
+func (e executor) exec(ctx context.Context, alloc *api.Allocation, taskID string, cmd []string) (*execOutput, error) {
 	e.logger.Infof("getting info for node %s", alloc.NodeID)
 
 	node, _, err := e.client.Nodes().Info(alloc.NodeID, e.queryOptions)
@@ -35,8 +28,7 @@ func (e executor) exec(ctx context.Context, allocID, taskID string, cmd []string
 
 	var bufStdout, bufStderr bytes.Buffer
 
-	_, err = e.client.Allocations().Exec(ctx, alloc, taskID, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, e.queryOptions)
-	if err != nil {
+	if _, err := e.client.Allocations().Exec(ctx, alloc, taskID, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, e.queryOptions); err != nil {
 		return nil, fmt.Errorf("failed to exec command on allocation %s: %w", alloc.ID, err)
 	}
 

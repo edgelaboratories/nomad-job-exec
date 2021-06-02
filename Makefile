@@ -14,7 +14,7 @@ lint:
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build $(GO_BUILD_OPTS) -o bin/nomad-alloc-exec .
+	CGO_ENABLED=0 go build $(GO_BUILD_OPTS) -o bin/nomad-job-exec .
 
 .PHONY: test
 test:

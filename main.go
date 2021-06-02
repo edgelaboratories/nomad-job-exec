@@ -25,16 +25,11 @@ func main() { // nolint: cyclop, funlen, gocognit
 	if *jobID == "" {
 		log.Fatal("job ID cannot be empty")
 	}
-	if *taskID == "" {
-		log.Fatal("task ID cannot be empty")
-	}
 
 	splitCommand, err := shlex.Split(*cmd)
 	if err != nil {
 		log.Fatalf("failed to shlex the input command: %v", err)
 	}
-
-	log.Info(splitCommand)
 
 	timeoutDuration, err := time.ParseDuration(*timeout)
 	if err != nil {
@@ -52,9 +47,17 @@ func main() { // nolint: cyclop, funlen, gocognit
 
 	log.Infof("listing all allocations for job %s", *jobID)
 
-	allocations, _, err := client.Jobs().Allocations(*jobID, true, &api.QueryOptions{})
+	queryOptions := &api.QueryOptions{}
+
+	allocations, _, err := client.Jobs().Allocations(*jobID, true, queryOptions)
 	if err != nil {
 		log.Fatalf("failed to get the list of allocations for job %s: %v", *jobID, err)
+	}
+
+	if len(allocations) == 0 {
+		log.Infof("no allocations found for job \"%s\"", *jobID)
+
+		os.Exit(0)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -80,8 +83,10 @@ func main() { // nolint: cyclop, funlen, gocognit
 			if len(out.stderr) != 0 {
 				logger.Info("flushing command output to stderr")
 
-				_, err = io.WriteString(os.Stderr, fmt.Sprintf("[AllocID: %s, Node: [%s]]\n%s", out.allocID, out.node, out.stderr))
-				if err != nil {
+				if _, err := io.WriteString(
+					os.Stderr,
+					fmt.Sprintf("[AllocID: %s, Node: [%s]]\n%s", out.allocID, out.node, out.stderr),
+				); err != nil {
 					log.Errorf("failed to copy to stderr: %v", err)
 				}
 			}
@@ -89,8 +94,10 @@ func main() { // nolint: cyclop, funlen, gocognit
 			if len(out.stdout) != 0 {
 				logger.Info("flushing command output to stdout")
 
-				_, err = io.WriteString(os.Stdout, fmt.Sprintf("[AllocID: %s, Node: [%s]]\n%s", out.allocID, out.node, out.stdout))
-				if err != nil {
+				if _, err := io.WriteString(
+					os.Stdout,
+					fmt.Sprintf("[AllocID: %s, Node: [%s]]\n%s", out.allocID, out.node, out.stdout),
+				); err != nil {
 					log.Errorf("failed to copy to stdout: %v", err)
 				}
 			}
@@ -120,20 +127,46 @@ func main() { // nolint: cyclop, funlen, gocognit
 				continue
 			}
 
-			eg.Go(func() error {
-				output, err := executor{
-					client:       client,
-					queryOptions: &api.QueryOptions{},
-					logger:       logger,
-				}.exec(ctx, allocID, *taskID, splitCommand)
-				if err != nil {
-					return err
+			logger.Infof("retrieving allocation info")
+
+			alloc, _, err := client.Allocations().Info(allocID, queryOptions)
+			if err != nil {
+				logger.Errorf("failed to retrieve allocation info: %v", err)
+
+				continue
+			}
+
+			tg := alloc.Job.LookupTaskGroup(alloc.TaskGroup)
+			if tg == nil {
+				logger.Errorf("failed to retrieve allocation task group: %v", err)
+
+				continue
+			}
+
+			for _, task := range tg.Tasks {
+				taskName := task.Name
+
+				if *taskID != "" && *taskID != taskName {
+					logger.Infof("skipping allocation because it is not part of task \"%s\"", taskName)
+
+					continue
 				}
 
-				execOutputCh <- output
+				eg.Go(func() error {
+					output, err := executor{
+						client:       client,
+						queryOptions: queryOptions,
+						logger:       logger,
+					}.exec(ctx, alloc, taskName, splitCommand)
+					if err != nil {
+						return err
+					}
 
-				return nil
-			})
+					execOutputCh <- output
+
+					return nil
+				})
+			}
 		}
 	}
 
