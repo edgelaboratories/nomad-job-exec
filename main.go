@@ -21,7 +21,19 @@ func main() { // nolint: cyclop, funlen
 	cmd := flag.String("command", "", "Command to execute on allocations")
 	timeout := flag.String("timeout", "10m", "Timeout for the command to execute on all allocations")
 	parallel := flag.Bool("parallel", false, "Execute in parallel if true")
+	logLevel := flag.String("log-level", "info", "Log level")
 	flag.Parse()
+
+	// Configure logger
+
+	level, err := log.ParseLevel(*logLevel)
+	if err != nil {
+		log.Fatalf("failed to parse log level: %v", err)
+	}
+	log.SetLevel(level)
+	log.SetOutput(os.Stdout)
+
+	// Check inputs
 
 	if *jobID == "" {
 		log.Fatal("job ID cannot be empty")
@@ -36,6 +48,8 @@ func main() { // nolint: cyclop, funlen
 	if err != nil {
 		log.Fatalf("failed to parse the timeout duration: %v", err)
 	}
+
+	// Create Nomad API client
 
 	apiClient, err := api.NewClient(&api.Config{
 		Address:   os.Getenv("NOMAD_ADDR"),
