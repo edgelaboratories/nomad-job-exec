@@ -69,14 +69,8 @@ func main() { // nolint: cyclop, funlen
 
 	// Execute command on allocations and dump output in stdout/stderr
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	timeoutCh := time.After(timeoutDuration)
-	go func() {
-		<-timeoutCh
-
-		cancel()
-	}()
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
 	done := make(chan bool, 1)
