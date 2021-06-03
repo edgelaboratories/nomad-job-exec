@@ -195,54 +195,88 @@ func getAllocationsInfo(c client, jobID, taskID string) ([]*allocInfo, error) {
 			continue
 		}
 
-		allocInfo, err := getAllocationInfo(c, alloc.ID, taskID)
+		alloc, err := c.allocationInfo(alloc.ID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to retrieve allocation %s info: %w", alloc.ID, err)
 		}
 
-		res = append(res, allocInfo)
+		if taskID != "" {
+			// If task is given, the task is know so we filter out allocations
+			// that don't have the specified task
+
+			tasks, err := getAllTasks(alloc)
+			if err != nil {
+				return nil, fmt.Errorf("failed to retrieve tasks for allocation %s", alloc.ID)
+			}
+
+			if contains(tasks, taskID) {
+				res = append(res, &allocInfo{
+					alloc: alloc,
+					task:  taskID,
+				})
+			}
+
+			continue
+		}
+
+		// The task was not provided so we must retrieve it
+
+		task, err := retrieveTask(alloc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve task name for allocation %s: %w", alloc.ID, err)
+		}
+
+		res = append(res, &allocInfo{
+			alloc: alloc,
+			task:  task,
+		})
 	}
 
 	return res, nil
 }
 
-func getAllocationInfo(c client, allocID, task string) (*allocInfo, error) {
-	alloc, err := c.allocationInfo(allocID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve allocation %s info: %w", allocID, err)
-	}
-
-	if task != "" {
-		return &allocInfo{
-			alloc: alloc,
-			task:  task,
-		}, nil
-	}
-
-	taskName, err := getTaskName(alloc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve task name for allocation %s: %w", allocID, err)
-	}
-
-	return &allocInfo{
-		alloc: alloc,
-		task:  taskName,
-	}, nil
-}
-
-func getTaskName(alloc *api.Allocation) (string, error) {
+func retrieveTask(alloc *api.Allocation) (string, error) {
 	taskGroup := alloc.Job.LookupTaskGroup(alloc.TaskGroup)
 	if taskGroup == nil {
 		return "", errors.New("failed to retrieve task group")
 	}
 
-	if nbTasks := len(taskGroup.Tasks); nbTasks != 1 {
+	tasks, err := getAllTasks(alloc)
+	if err != nil {
+		return "", errors.New("failed to retrieve tasks")
+	}
+
+	if nbTasks := len(tasks); nbTasks != 1 {
 		return "", fmt.Errorf("found %d tasks, please specify the task name", nbTasks)
 	}
 
-	return taskGroup.Tasks[0].Name, nil
+	return tasks[0], nil
+}
+
+func getAllTasks(alloc *api.Allocation) ([]string, error) {
+	taskGroup := alloc.Job.LookupTaskGroup(alloc.TaskGroup)
+	if taskGroup == nil {
+		return nil, errors.New("failed to retrieve task group")
+	}
+
+	res := []string{}
+	for _, t := range taskGroup.Tasks {
+		res = append(res, t.Name)
+	}
+
+	return res, nil
 }
 
 func allocationExec(ctx context.Context, c client, allocInfo *allocInfo, cmd []string) (*execOutput, error) {
 	return c.allocationExec(ctx, allocInfo.alloc, allocInfo.task, cmd)
+}
+
+func contains(tasks []string, task string) bool {
+	for _, t := range tasks {
+		if t == task {
+			return true
+		}
+	}
+
+	return false
 }

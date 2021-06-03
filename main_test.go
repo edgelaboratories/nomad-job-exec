@@ -17,8 +17,14 @@ var (
 			{
 				Name: stringToPtr("tg-1"),
 				Tasks: []*api.Task{
-					api.NewTask("task-1", "docker"),
-					api.NewTask("task-2", "docker"),
+					api.NewTask("task-11", "docker"),
+					api.NewTask("task-12", "docker"),
+				},
+			},
+			{
+				Name: stringToPtr("tg-2"),
+				Tasks: []*api.Task{
+					api.NewTask("task-21", "docker"),
 				},
 			},
 		},
@@ -34,7 +40,13 @@ var (
 		"alloc-2": {
 			ID:           "alloc-2",
 			ClientStatus: "running",
-			TaskGroup:    "tg-1",
+			TaskGroup:    "tg-2",
+			Job:          job,
+		},
+		"alloc-3": {
+			ID:           "alloc-3",
+			ClientStatus: "complete",
+			TaskGroup:    "tg-2",
 			Job:          job,
 		},
 	}
@@ -47,6 +59,8 @@ func (c *mockClient) jobAllocations(jobID string) ([]*api.AllocationListStub, er
 		return nil, fmt.Errorf("failed to get allocatins for job %s", jobID)
 	}
 
+	// We cannot use the `Stub()` method because we're not
+	// providing all the fields in the mock allocs
 	return []*api.AllocationListStub{
 		{
 			ID:           "alloc-1",
@@ -55,6 +69,10 @@ func (c *mockClient) jobAllocations(jobID string) ([]*api.AllocationListStub, er
 		{
 			ID:           "alloc-2",
 			ClientStatus: "running",
+		},
+		{
+			ID:           "alloc-3",
+			ClientStatus: "complete",
 		},
 	}, nil
 }
@@ -79,32 +97,45 @@ func (c *mockClient) allocationExec(ctx context.Context, alloc *api.Allocation, 
 func Test_getAllocationsInfo(t *testing.T) {
 	t.Parallel()
 
-	infos, err := getAllocationsInfo(&mockClient{}, "job-1", "task-1")
+	// Target first task of first task group
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-11")
 	require.NoError(t, err)
 
-	assert.Equal(t, 2, len(infos))
+	require.Len(t, info, 1)
+	assert.Equal(t, allocs["alloc-1"], info[0].alloc)
+	assert.Equal(t, "task-11", info[0].task)
 
-	assert.Equal(t, allocs["alloc-1"], infos[0].alloc)
-	assert.Equal(t, "task-1", infos[0].task)
+	// Target second task of first task group
+	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-12")
+	require.NoError(t, err)
 
-	assert.Equal(t, allocs["alloc-2"], infos[1].alloc)
-	assert.Equal(t, "task-1", infos[1].task)
+	require.Len(t, info, 1)
+	assert.Equal(t, allocs["alloc-1"], info[0].alloc)
+	assert.Equal(t, "task-12", info[0].task)
+
+	// Target first task of second task group
+	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	require.NoError(t, err)
+
+	require.Len(t, info, 1)
+	assert.Equal(t, allocs["alloc-2"], info[0].alloc)
+	assert.Equal(t, "task-21", info[0].task)
 }
 
-func Test_getAllocationInfo(t *testing.T) {
+func Test_getAllocationsInfo_FailWhenTaskIsAmbiguous(t *testing.T) {
 	t.Parallel()
 
-	info, err := getAllocationInfo(&mockClient{}, "alloc-1", "task-1")
+	_, err := getAllocationsInfo(&mockClient{}, "job-1", "")
+	require.Error(t, err)
+}
+
+func Test_getAllocationsInfo_FilterOnTask(t *testing.T) {
+	t.Parallel()
+
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "inexistant-task")
 	require.NoError(t, err)
 
-	assert.Equal(t, "task-1", info.task)
-	assert.Equal(t, allocs["alloc-1"], info.alloc)
-
-	info, err = getAllocationInfo(&mockClient{}, "alloc-2", "task-1")
-	require.NoError(t, err)
-
-	assert.Equal(t, "task-1", info.task)
-	assert.Equal(t, allocs["alloc-2"], info.alloc)
+	assert.Len(t, info, 0)
 }
 
 func Test_getTaskName(t *testing.T) {
@@ -126,7 +157,7 @@ func Test_getTaskName(t *testing.T) {
 		},
 	}
 
-	res, err := getTaskName(alloc)
+	res, err := retrieveTask(alloc)
 	require.NoError(t, err)
 	assert.Equal(t, expectedName, res)
 }
@@ -145,7 +176,7 @@ func Test_getTaskName_MissingTaskGroup(t *testing.T) {
 		},
 	}
 
-	_, err := getTaskName(alloc)
+	_, err := retrieveTask(alloc)
 	assert.Error(t, err)
 }
 
@@ -167,7 +198,7 @@ func Test_getTaskName_MultipleTasks(t *testing.T) {
 		},
 	}
 
-	_, err := getTaskName(alloc)
+	_, err := retrieveTask(alloc)
 	assert.Error(t, err)
 }
 
@@ -188,6 +219,16 @@ func Test_allocationExec(t *testing.T) {
 	assert.Equal(t, "alloc-1", out.allocID)
 	assert.Equal(t, "stdout output", out.stdout)
 	assert.Equal(t, "stderr output", out.stderr)
+}
+
+func Test_contains(t *testing.T) {
+	t.Parallel()
+
+	c := []string{"alpha", "beta"}
+
+	assert.True(t, contains(c, "alpha"))
+	assert.True(t, contains(c, "beta"))
+	assert.False(t, contains(c, "gamma"))
 }
 
 func stringToPtr(str string) *string {
