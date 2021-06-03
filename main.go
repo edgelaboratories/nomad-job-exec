@@ -118,7 +118,7 @@ func main() { // nolint: cyclop, funlen
 	}
 
 	if err := eg.Wait(); err != nil {
-		log.Fatalf("failed to exec on all the allocations: %v", err)
+		log.Errorf("failed to exec on all the allocations: %v", err)
 	}
 
 	close(execOutputCh)
