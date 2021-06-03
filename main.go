@@ -110,14 +110,14 @@ func main() { // nolint: cyclop, funlen
 			allocInfo := allocInfo
 
 			logger := log.WithFields(log.Fields{
-				"job_id":        jobID,
+				"job_id":        *jobID,
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
+				"group_id":      allocInfo.alloc.TaskGroup,
 			})
 
-			logger.Infof("executing command: %q", *cmd)
-
 			eg.Go(func() error {
+				logger.Infof("executing command: %q", *cmd)
 				defer logger.Info("command executed")
 
 				output, err := allocationExec(ctx, client, allocInfo, splitCommand)
@@ -202,8 +202,8 @@ func getAllocationsInfo(c client, jobID, taskID string) ([]*allocInfo, error) {
 		}
 
 		if taskID != "" {
-			// If task is given, the task is know so we filter out allocations
-			// that don't have the specified task
+			// If task is given, the task is known, so we filter out allocations
+			// that don't have this specific task.
 
 			tasks, err := getAllTasks(alloc)
 			if err != nil {
