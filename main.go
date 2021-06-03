@@ -110,11 +110,12 @@ func main() { // nolint: cyclop, funlen
 			allocInfo := allocInfo
 
 			logger := log.WithFields(log.Fields{
+				"job_id":        jobID,
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
 			})
 
-			logger.Info("executing command")
+			logger.Infof("executing command: %q", *cmd)
 
 			eg.Go(func() error {
 				defer logger.Info("command executed")
@@ -149,7 +150,7 @@ func consumeExecOutput(in <-chan *execOutput, done chan<- bool) {
 		logger := log.WithField("allocation_id", out.allocID)
 
 		if len(out.stderr) != 0 {
-			logger.Info("flushing command output to stderr")
+			logger.Debug("flushing command output to stderr")
 
 			if _, err := io.WriteString(
 				os.Stderr,
@@ -160,7 +161,7 @@ func consumeExecOutput(in <-chan *execOutput, done chan<- bool) {
 		}
 
 		if len(out.stdout) != 0 {
-			logger.Info("flushing command output to stdout")
+			logger.Debug("flushing command output to stdout")
 
 			if _, err := io.WriteString(
 				os.Stdout,
