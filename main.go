@@ -89,7 +89,7 @@ func main() { // nolint: cyclop, funlen
 	if *parallel {
 		concurrency := nbAllocs
 
-		log.Infof("running command on %d allocations with concurrency %d", nbAllocs, concurrency)
+		log.Infof("running command `%s` on %d allocations with concurrency %d", *cmd, nbAllocs, concurrency)
 
 		if err := executeConcurrently(ctx, logger, client, allocationsInfo, splitCommand, concurrency); err != nil {
 			cancel()
@@ -101,7 +101,7 @@ func main() { // nolint: cyclop, funlen
 		os.Exit(0)
 	}
 
-	log.Infof("running command sequentially on %d allocations", nbAllocs)
+	log.Infof("running command `%s` sequentially on %d allocations", *cmd, nbAllocs)
 
 	if err := executeSequentially(ctx, logger, client, allocationsInfo, splitCommand); err != nil {
 		cancel()
@@ -109,7 +109,7 @@ func main() { // nolint: cyclop, funlen
 		log.Fatalf("failed to sequentially execute command on allocations: %v", err)
 	}
 
-	log.Infof("command `%s` ran successfully on %d allocations", *cmd, nbAllocs)
+	log.Infof("command `%s` ran successfully on %d allocations sequentially", *cmd, nbAllocs)
 }
 
 func executeSequentially(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string) error {
