@@ -74,34 +74,103 @@ func main() { // nolint: cyclop, funlen
 	}
 
 	nbAllocs := len(allocationsInfo)
-
 	if nbAllocs == 0 {
 		log.Infof("no allocations found for job %q", *jobID)
 
 		os.Exit(0)
 	}
 
-	// Execute command on allocations and dump output in stdout/stderr
+	logger := log.WithFields(log.Fields{
+		"job_id": *jobID,
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-	defer cancel()
+
+	if *parallel {
+		concurrency := nbAllocs
+
+		log.Infof("running command on %d allocations with concurrency %d", nbAllocs, concurrency)
+
+		if err := executeConcurrently(ctx, logger, client, allocationsInfo, splitCommand, concurrency); err != nil {
+			cancel()
+
+			log.Fatalf("failed to concurrently execute command on allocations: %v", err)
+		}
+
+		log.Infof("command `%s` ran successfully on %d allocations with concurrency %d", *cmd, nbAllocs, concurrency)
+		os.Exit(0)
+	}
+
+	log.Infof("running command sequentially on %d allocations", nbAllocs)
+
+	if err := executeSequentially(ctx, logger, client, allocationsInfo, splitCommand); err != nil {
+		cancel()
+
+		log.Fatalf("failed to sequentially execute command on allocations: %v", err)
+	}
+
+	log.Infof("command `%s` ran successfully on %d allocations", *cmd, nbAllocs)
+}
+
+func executeSequentially(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string) error {
+	for _, allocInfo := range allocsInfo {
+		select {
+		case <-ctx.Done():
+			break
+
+		default:
+			logger := logger.WithFields(log.Fields{
+				"allocation_id": allocInfo.alloc.ID,
+				"task_id":       allocInfo.task,
+				"group_id":      allocInfo.alloc.TaskGroup,
+			})
+
+			allocInfo := allocInfo
+
+			logger.Info("executing command")
+
+			output, err := allocationExec(ctx, c, allocInfo, cmd)
+			if err != nil {
+				return fmt.Errorf("failed to exec on allocation: %w", err)
+			}
+
+			logger.Info("command executed")
+
+			if err := consumeExecOutput(output); err != nil {
+				return fmt.Errorf("failed to consume command output: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string, concurrency int) error {
+	nbAllocs := len(allocsInfo)
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
 	done := make(chan bool, 1)
 
-	go consumeExecOutput(execOutputCh, done)
+	defer func() {
+		close(execOutputCh)
+		<-done
+	}()
 
-	// Only use concurrency if --parallel is true
-	concurrency := 1
-	if *parallel {
-		concurrency = nbAllocs
-	}
+	go func() {
+		defer func() {
+			done <- true
+		}()
 
-	log.Infof("running command on %d allocations with concurrency %d", nbAllocs, concurrency)
+		for out := range execOutputCh {
+			if err := consumeExecOutput(out); err != nil {
+				log.Errorf("failed to consume command output: %v", err)
+			}
+		}
+	}()
 
 	eg, ctx := errgroup.WithContextN(ctx, concurrency, concurrency)
 
-	for _, allocInfo := range allocationsInfo {
+	for _, allocInfo := range allocsInfo {
 		select {
 		case <-ctx.Done():
 			break
@@ -109,18 +178,17 @@ func main() { // nolint: cyclop, funlen
 		default:
 			allocInfo := allocInfo
 
-			logger := log.WithFields(log.Fields{
-				"job_id":        *jobID,
+			logger := logger.WithFields(log.Fields{
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
 				"group_id":      allocInfo.alloc.TaskGroup,
 			})
 
 			eg.Go(func() error {
-				logger.Infof("executing command: %q", *cmd)
+				logger.Info("executing command")
 				defer logger.Info("command executed")
 
-				output, err := allocationExec(ctx, client, allocInfo, splitCommand)
+				output, err := allocationExec(ctx, c, allocInfo, cmd)
 				if err != nil {
 					return err
 				}
@@ -133,44 +201,38 @@ func main() { // nolint: cyclop, funlen
 	}
 
 	if err := eg.Wait(); err != nil {
-		log.Errorf("failed to exec on all the allocations: %v", err)
+		return fmt.Errorf("failed to exec on all the allocations: %w", err)
 	}
 
-	close(execOutputCh)
-
-	<-done
+	return nil
 }
 
-func consumeExecOutput(in <-chan *execOutput, done chan<- bool) {
-	defer func() {
-		done <- true
-	}()
+func consumeExecOutput(out *execOutput) error {
+	logger := log.WithField("allocation_id", out.allocID)
 
-	for out := range in {
-		logger := log.WithField("allocation_id", out.allocID)
+	if len(out.stderr) != 0 {
+		logger.Debug("flushing command output to stderr")
 
-		if len(out.stderr) != 0 {
-			logger.Debug("flushing command output to stderr")
-
-			if _, err := io.WriteString(
-				os.Stderr,
-				fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stderr),
-			); err != nil {
-				log.Errorf("failed to copy to stderr: %v", err)
-			}
-		}
-
-		if len(out.stdout) != 0 {
-			logger.Debug("flushing command output to stdout")
-
-			if _, err := io.WriteString(
-				os.Stdout,
-				fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stdout),
-			); err != nil {
-				log.Errorf("failed to copy to stdout: %v", err)
-			}
+		if _, err := io.WriteString(
+			os.Stderr,
+			fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stderr),
+		); err != nil {
+			return fmt.Errorf("failed to copy to stderr: %w", err)
 		}
 	}
+
+	if len(out.stdout) != 0 {
+		logger.Debug("flushing command output to stdout")
+
+		if _, err := io.WriteString(
+			os.Stdout,
+			fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stdout),
+		); err != nil {
+			return fmt.Errorf("failed to copy to stdout: %w", err)
+		}
+	}
+
+	return nil
 }
 
 type client interface {
