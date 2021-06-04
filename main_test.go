@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/nomad/api"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +50,12 @@ var (
 			TaskGroup:    "tg-2",
 			Job:          job,
 		},
+		"alloc-4": {
+			ID:           "alloc-4",
+			ClientStatus: "running",
+			TaskGroup:    "tg-2",
+			Job:          job,
+		},
 	}
 )
 
@@ -59,22 +66,19 @@ func (c *mockClient) jobAllocations(jobID string) ([]*api.AllocationListStub, er
 		return nil, fmt.Errorf("failed to get allocatins for job %s", jobID)
 	}
 
-	// We cannot use the `Stub()` method because we're not
-	// providing all the fields in the mock allocs
-	return []*api.AllocationListStub{
-		{
-			ID:           "alloc-1",
-			ClientStatus: "running",
-		},
-		{
-			ID:           "alloc-2",
-			ClientStatus: "running",
-		},
-		{
-			ID:           "alloc-3",
-			ClientStatus: "complete",
-		},
-	}, nil
+	res := []*api.AllocationListStub{}
+	for _, alloc := range allocs {
+		res = append(res, stubFromAlloc(alloc))
+	}
+
+	return res, nil
+}
+
+func stubFromAlloc(alloc *api.Allocation) *api.AllocationListStub {
+	return &api.AllocationListStub{
+		ID:           alloc.ID,
+		ClientStatus: alloc.ClientStatus,
+	}
 }
 
 func (c *mockClient) allocationInfo(allocID string) (*api.Allocation, error) {
@@ -117,9 +121,12 @@ func Test_getAllocationsInfo(t *testing.T) {
 	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-21")
 	require.NoError(t, err)
 
-	require.Len(t, info, 1)
-	assert.Equal(t, allocs["alloc-2"], info[0].alloc)
-	assert.Equal(t, "task-21", info[0].task)
+	require.Len(t, info, 2)
+
+	for _, i := range info {
+		assert.Equal(t, allocs[i.alloc.ID], i.alloc)
+		assert.Equal(t, "task-21", i.task)
+	}
 }
 
 func Test_getAllocationsInfo_FailWhenTaskIsAmbiguous(t *testing.T) {
@@ -219,6 +226,39 @@ func Test_allocationExec(t *testing.T) {
 	assert.Equal(t, "alloc-1", out.allocID)
 	assert.Equal(t, "stdout output", out.stdout)
 	assert.Equal(t, "stderr output", out.stderr)
+}
+
+func Test_executeSequentially(t *testing.T) {
+	t.Parallel()
+
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.NoError(t, executeSequentially(
+		ctx,
+		log.WithField("test", true),
+		&mockClient{},
+		info,
+		[]string{"ls"},
+	))
+}
+
+func Test_executeConcurrently(t *testing.T) {
+	t.Parallel()
+
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.NoError(t, executeConcurrently(
+		ctx,
+		log.WithField("test", true),
+		&mockClient{},
+		info,
+		[]string{"ls"},
+		5,
+	))
 }
 
 func Test_contains(t *testing.T) {
