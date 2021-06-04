@@ -136,6 +136,8 @@ func main() { // nolint: cyclop, funlen
 		log.Errorf("failed to exec on all the allocations: %v", err)
 	}
 
+	log.Infof("command `%s` ran successfully on %d allocations with concurrency %d.", *cmd, nbAllocs, concurrency)
+
 	close(execOutputCh)
 
 	<-done
