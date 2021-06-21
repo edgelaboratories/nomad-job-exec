@@ -210,6 +210,10 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 func consumeExecOutput(out *execOutput) error {
 	logger := log.WithField("allocation_id", out.allocID)
 
+	if out.exitCode != 0 {
+		logger.Errorf("command failed with exit code %d", out.exitCode)
+	}
+
 	if len(out.stderr) != 0 {
 		logger.Debug("flushing command output to stderr")
 
