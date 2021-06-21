@@ -228,6 +228,25 @@ func Test_allocationExec(t *testing.T) {
 	assert.Equal(t, "stderr output", out.stderr)
 }
 
+func Test_allocationExec_Failure(t *testing.T) {
+	t.Parallel()
+
+	out, err := allocationExec(
+		context.Background(),
+		&mockClient{},
+		&allocInfo{
+			alloc: allocs["alloc-1"],
+			task:  "task-1",
+		},
+		[]string{"idontexist"},
+	)
+	require.Error(t, err)
+
+	assert.Equal(t, "alloc-1", out.allocID)
+	assert.Equal(t, "stdout output", out.stdout)
+	assert.Equal(t, "stderr output", out.stderr)
+}
+
 func Test_executeSequentially(t *testing.T) {
 	t.Parallel()
 

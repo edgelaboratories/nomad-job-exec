@@ -40,13 +40,22 @@ type execOutput struct {
 func (c *apiClientWrap) allocationExec(ctx context.Context, alloc *api.Allocation, task string, cmd []string) (*execOutput, error) {
 	var bufStdout, bufStderr bytes.Buffer
 
-	if _, err := c.Allocations().Exec(ctx, alloc, task, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, &api.QueryOptions{}); err != nil {
+	exitCode, err := c.Allocations().Exec(ctx, alloc, task, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, &api.QueryOptions{})
+	if err != nil {
 		return nil, fmt.Errorf("failed to exec command on allocation: %w", err)
 	}
 
-	return &execOutput{
+	output := &execOutput{
 		allocID: alloc.ID,
 		stdout:  bufStdout.String(),
 		stderr:  bufStderr.String(),
-	}, nil
+	}
+
+	if exitCode != 0 {
+		err = fmt.Errorf("command exited with code: %d", exitCode)
+	} else {
+		err = nil
+	}
+
+	return output, err
 }
