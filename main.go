@@ -156,11 +156,6 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 	execOutputCh := make(chan *execOutput, nbAllocs)
 	done := make(chan bool, 1)
 
-	defer func() {
-		close(execOutputCh)
-		<-done
-	}()
-
 	var exitCode int
 	go func(exitCode *int) {
 		defer func() {
@@ -214,6 +209,9 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("failed to exec on all the allocations: %w", err)
 	}
+
+	close(execOutputCh)
+	<-done
 
 	if exitCode != 0 {
 		return fmt.Errorf("command failed with code %d", exitCode)
