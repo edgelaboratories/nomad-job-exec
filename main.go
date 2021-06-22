@@ -161,9 +161,6 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 		<-done
 	}()
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	var exitCode int
 	go func(exitCode *int) {
 		defer func() {
@@ -178,9 +175,6 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 
 			if c != 0 {
 				*exitCode = c
-				cancel()
-
-				return
 			}
 		}
 	}(&exitCode)
