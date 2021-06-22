@@ -137,6 +137,24 @@ func Test_executeSequentially(t *testing.T) {
 	))
 }
 
+func Test_executeSequentially_Failure(t *testing.T) {
+	t.Parallel()
+
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.Error(t, executeSequentially(
+		ctx,
+		log.WithField("test", true),
+		&mockClient{
+			failExec: true,
+		},
+		info,
+		[]string{"ls"},
+	))
+}
+
 func Test_executeConcurrently(t *testing.T) {
 	t.Parallel()
 
@@ -148,6 +166,25 @@ func Test_executeConcurrently(t *testing.T) {
 		ctx,
 		log.WithField("test", true),
 		&mockClient{},
+		info,
+		[]string{"ls"},
+		5,
+	))
+}
+
+func Test_executeConcurrently_Failure(t *testing.T) {
+	t.Parallel()
+
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	assert.Error(t, executeConcurrently(
+		ctx,
+		log.WithField("test", true),
+		&mockClient{
+			failExec: true,
+		},
 		info,
 		[]string{"ls"},
 		5,

@@ -136,8 +136,13 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 
 			logger.Info("command executed")
 
-			if err := consumeExecOutput(output); err != nil {
+			exitCode, err := consumeExecOutput(output)
+			if err != nil {
 				return fmt.Errorf("failed to consume command output: %w", err)
+			}
+
+			if exitCode != 0 {
+				return fmt.Errorf("command failed with code %d", exitCode)
 			}
 		}
 	}
@@ -145,7 +150,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 	return nil
 }
 
-func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string, concurrency int) error {
+func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string, concurrency int) error { // nolint: funlen
 	nbAllocs := len(allocsInfo)
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
@@ -156,17 +161,29 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 		<-done
 	}()
 
-	go func() {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var exitCode int
+	go func(exitCode *int) {
 		defer func() {
 			done <- true
 		}()
 
-		for out := range execOutputCh {
-			if err := consumeExecOutput(out); err != nil {
+		for output := range execOutputCh {
+			c, err := consumeExecOutput(output)
+			if err != nil {
 				log.Errorf("failed to consume command output: %v", err)
 			}
+
+			if c != 0 {
+				*exitCode = c
+				cancel()
+
+				return
+			}
 		}
-	}()
+	}(&exitCode)
 
 	eg, ctx := errgroup.WithContextN(ctx, concurrency, concurrency)
 
@@ -204,15 +221,15 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 		return fmt.Errorf("failed to exec on all the allocations: %w", err)
 	}
 
+	if exitCode != 0 {
+		return fmt.Errorf("command failed with code %d", exitCode)
+	}
+
 	return nil
 }
 
-func consumeExecOutput(out *execOutput) error {
+func consumeExecOutput(out *execOutput) (int, error) {
 	logger := log.WithField("allocation_id", out.allocID)
-
-	if out.exitCode != 0 {
-		logger.Errorf("command failed with exit code %d", out.exitCode)
-	}
 
 	if len(out.stderr) != 0 {
 		logger.Debug("flushing command output to stderr")
@@ -221,7 +238,7 @@ func consumeExecOutput(out *execOutput) error {
 			os.Stderr,
 			fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stderr),
 		); err != nil {
-			return fmt.Errorf("failed to copy to stderr: %w", err)
+			return out.exitCode, fmt.Errorf("failed to copy to stderr: %w", err)
 		}
 	}
 
@@ -232,11 +249,11 @@ func consumeExecOutput(out *execOutput) error {
 			os.Stdout,
 			fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stdout),
 		); err != nil {
-			return fmt.Errorf("failed to copy to stdout: %w", err)
+			return out.exitCode, fmt.Errorf("failed to copy to stdout: %w", err)
 		}
 	}
 
-	return nil
+	return out.exitCode, nil
 }
 
 type client interface {
