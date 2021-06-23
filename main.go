@@ -136,13 +136,12 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 
 			logger.Info("command executed")
 
-			exitCode, err := consumeExecOutput(output)
-			if err != nil {
+			if err := consumeExecOutput(output); err != nil {
 				return fmt.Errorf("failed to consume command output: %w", err)
 			}
 
-			if exitCode != 0 {
-				return fmt.Errorf("command failed with code %d", exitCode)
+			if output.exitCode != 0 {
+				return fmt.Errorf("command failed with code %d", output.exitCode)
 			}
 		}
 	}
@@ -163,13 +162,12 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 		}()
 
 		for output := range execOutputCh {
-			c, err := consumeExecOutput(output)
-			if err != nil {
+			if err := consumeExecOutput(output); err != nil {
 				log.Errorf("failed to consume command output: %v", err)
 			}
 
-			if c != 0 {
-				*exitCode = c
+			if output.exitCode != 0 {
+				*exitCode = output.exitCode
 			}
 		}
 	}(&exitCode)
@@ -220,7 +218,7 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 	return nil
 }
 
-func consumeExecOutput(out *execOutput) (int, error) {
+func consumeExecOutput(out *execOutput) error {
 	logger := log.WithField("allocation_id", out.allocID)
 
 	if len(out.stderr) != 0 {
@@ -230,7 +228,7 @@ func consumeExecOutput(out *execOutput) (int, error) {
 			os.Stderr,
 			fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stderr),
 		); err != nil {
-			return out.exitCode, fmt.Errorf("failed to copy to stderr: %w", err)
+			return fmt.Errorf("failed to copy to stderr: %w", err)
 		}
 	}
 
@@ -241,11 +239,11 @@ func consumeExecOutput(out *execOutput) (int, error) {
 			os.Stdout,
 			fmt.Sprintf("[AllocID: %s]\n%s", out.allocID, out.stdout),
 		); err != nil {
-			return out.exitCode, fmt.Errorf("failed to copy to stdout: %w", err)
+			return fmt.Errorf("failed to copy to stdout: %w", err)
 		}
 	}
 
-	return out.exitCode, nil
+	return nil
 }
 
 type client interface {
