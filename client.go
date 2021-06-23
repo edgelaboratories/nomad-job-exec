@@ -32,21 +32,24 @@ func (c *apiClientWrap) allocationInfo(allocID string) (*api.Allocation, error) 
 }
 
 type execOutput struct {
-	allocID string
-	stdout  string
-	stderr  string
+	allocID  string
+	exitCode int
+	stdout   string
+	stderr   string
 }
 
 func (c *apiClientWrap) allocationExec(ctx context.Context, alloc *api.Allocation, task string, cmd []string) (*execOutput, error) {
 	var bufStdout, bufStderr bytes.Buffer
 
-	if _, err := c.Allocations().Exec(ctx, alloc, task, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, &api.QueryOptions{}); err != nil {
+	exitCode, err := c.Allocations().Exec(ctx, alloc, task, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, &api.QueryOptions{})
+	if err != nil {
 		return nil, fmt.Errorf("failed to exec command on allocation: %w", err)
 	}
 
 	return &execOutput{
-		allocID: alloc.ID,
-		stdout:  bufStdout.String(),
-		stderr:  bufStderr.String(),
+		allocID:  alloc.ID,
+		exitCode: exitCode,
+		stdout:   bufStdout.String(),
+		stderr:   bufStderr.String(),
 	}, nil
 }

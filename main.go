@@ -131,7 +131,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 
 			output, err := allocationExec(ctx, c, allocInfo, cmd)
 			if err != nil {
-				return fmt.Errorf("failed to exec on allocation: %w", err)
+				return fmt.Errorf("failed to execute command: %w", err)
 			}
 
 			logger.Info("command executed")
@@ -139,34 +139,38 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 			if err := consumeExecOutput(output); err != nil {
 				return fmt.Errorf("failed to consume command output: %w", err)
 			}
+
+			if output.exitCode != 0 {
+				return fmt.Errorf("command failed with code %d", output.exitCode)
+			}
 		}
 	}
 
 	return nil
 }
 
-func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string, concurrency int) error {
+func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string, concurrency int) error { // nolint: funlen
 	nbAllocs := len(allocsInfo)
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
 	done := make(chan bool, 1)
 
-	defer func() {
-		close(execOutputCh)
-		<-done
-	}()
-
-	go func() {
+	var exitCode int
+	go func(exitCode *int) {
 		defer func() {
 			done <- true
 		}()
 
-		for out := range execOutputCh {
-			if err := consumeExecOutput(out); err != nil {
+		for output := range execOutputCh {
+			if err := consumeExecOutput(output); err != nil {
 				log.Errorf("failed to consume command output: %v", err)
 			}
+
+			if output.exitCode != 0 {
+				*exitCode = output.exitCode
+			}
 		}
-	}()
+	}(&exitCode)
 
 	eg, ctx := errgroup.WithContextN(ctx, concurrency, concurrency)
 
@@ -202,6 +206,13 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("failed to exec on all the allocations: %w", err)
+	}
+
+	close(execOutputCh)
+	<-done
+
+	if exitCode != 0 {
+		return fmt.Errorf("command failed with code %d", exitCode)
 	}
 
 	return nil
