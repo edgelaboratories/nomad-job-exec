@@ -131,7 +131,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 
 			output, err := allocationExec(ctx, c, allocInfo, cmd)
 			if err != nil {
-				return fmt.Errorf("failed to exec on allocation: %w", err)
+				return fmt.Errorf("failed to execute command: %w", err)
 			}
 
 			logger.Info("command executed")
