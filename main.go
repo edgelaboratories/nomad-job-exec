@@ -75,9 +75,7 @@ func main() { // nolint: cyclop, funlen
 
 	nbAllocs := len(allocationsInfo)
 	if nbAllocs == 0 {
-		log.Infof("no allocations found for job %q", *jobID)
-
-		os.Exit(0)
+		log.Fatalf("no allocations found for job %q", *jobID)
 	}
 
 	logger := log.WithFields(log.Fields{
