@@ -16,7 +16,7 @@ type apiClientWrap struct {
 func (c *apiClientWrap) jobAllocations(jobID, namespace string) ([]*api.AllocationListStub, error) {
 	allocations, _, err := c.Jobs().Allocations(jobID, true, &api.QueryOptions{Namespace: namespace})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the list of allocations for job %s: %w", jobID, err)
+		return nil, fmt.Errorf("failed to get the list of allocations for job %s (%s): %w", jobID, namespace, err)
 	}
 
 	return allocations, nil
@@ -25,7 +25,7 @@ func (c *apiClientWrap) jobAllocations(jobID, namespace string) ([]*api.Allocati
 func (c *apiClientWrap) allocationInfo(allocID, namespace string) (*api.Allocation, error) {
 	alloc, _, err := c.Allocations().Info(allocID, &api.QueryOptions{Namespace: namespace})
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve allocation %s info: %w", allocID, err)
+		return nil, fmt.Errorf("failed to retrieve allocation %s (%s) info: %w", allocID, namespace, err)
 	}
 
 	return alloc, nil
@@ -43,7 +43,7 @@ func (c *apiClientWrap) allocationExec(ctx context.Context, alloc *api.Allocatio
 
 	exitCode, err := c.Allocations().Exec(ctx, alloc, task, false, cmd, os.Stdin, &bufStdout, &bufStderr, nil, &api.QueryOptions{Namespace: namespace})
 	if err != nil {
-		return nil, fmt.Errorf("failed to exec command on allocation: %w", err)
+		return nil, fmt.Errorf("failed to exec command on allocation (%s): %w", namespace, err)
 	}
 
 	return &execOutput{

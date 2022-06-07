@@ -71,7 +71,7 @@ func main() { // nolint: cyclop, funlen
 
 	// Get the information about the job's running allocations
 
-	log.Infof("listing all allocations for job %s", *jobID)
+	log.Infof("listing all allocations for job %s (%s)", *jobID, *namespace)
 
 	allocationsInfo, err := getAllocationsInfo(client, *jobID, *taskID, *namespace)
 	if err != nil {
@@ -80,7 +80,7 @@ func main() { // nolint: cyclop, funlen
 
 	nbAllocs := len(allocationsInfo)
 	if nbAllocs == 0 {
-		log.Fatalf("no allocations found for job %q", *jobID)
+		log.Fatalf("no allocations found for job %q (%s)", *jobID, *namespace)
 	}
 
 	logger := log.WithFields(log.Fields{
