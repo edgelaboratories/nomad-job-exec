@@ -18,6 +18,7 @@ import (
 func main() { // nolint: cyclop, funlen
 	jobID := flag.String("job", "", "Job ID")
 	taskID := flag.String("task", "", "Task ID")
+	namespace := flag.String("namespace", "default", "Namespace")
 	cmd := flag.String("command", "", "Command to execute on allocations")
 	timeout := flag.String("timeout", "10m", "Timeout for the command to execute on all allocations")
 	parallel := flag.Bool("parallel", false, "Execute in parallel if true")
@@ -37,6 +38,10 @@ func main() { // nolint: cyclop, funlen
 
 	if *jobID == "" {
 		log.Fatal("job ID cannot be empty")
+	}
+
+	if ns, ok := os.LookupEnv("NOMAD_NAMESPACE"); ok {
+		*namespace = ns
 	}
 
 	splitCommand, err := shlex.Split(*cmd)
@@ -66,20 +71,21 @@ func main() { // nolint: cyclop, funlen
 
 	// Get the information about the job's running allocations
 
-	log.Infof("listing all allocations for job %s", *jobID)
+	log.Infof("listing all allocations for job %s (%s)", *jobID, *namespace)
 
-	allocationsInfo, err := getAllocationsInfo(client, *jobID, *taskID)
+	allocationsInfo, err := getAllocationsInfo(client, *jobID, *taskID, *namespace)
 	if err != nil {
 		log.Fatalf("failed to get the list of allocations: %v", err)
 	}
 
 	nbAllocs := len(allocationsInfo)
 	if nbAllocs == 0 {
-		log.Fatalf("no allocations found for job %q", *jobID)
+		log.Fatalf("no allocations found for job %q (%s)", *jobID, *namespace)
 	}
 
 	logger := log.WithFields(log.Fields{
-		"job_id": *jobID,
+		"job_id":    *jobID,
+		"namespace": *namespace,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
@@ -89,7 +95,7 @@ func main() { // nolint: cyclop, funlen
 
 		log.Infof("running command `%s` on %d allocations with concurrency %d", *cmd, nbAllocs, concurrency)
 
-		if err := executeConcurrently(ctx, logger, client, allocationsInfo, splitCommand, concurrency); err != nil {
+		if err := executeConcurrently(ctx, logger, client, allocationsInfo, *namespace, splitCommand, concurrency); err != nil {
 			cancel()
 
 			log.Fatalf("failed to concurrently execute command on allocations: %v", err)
@@ -101,7 +107,7 @@ func main() { // nolint: cyclop, funlen
 
 	log.Infof("running command `%s` sequentially on %d allocations", *cmd, nbAllocs)
 
-	if err := executeSequentially(ctx, logger, client, allocationsInfo, splitCommand); err != nil {
+	if err := executeSequentially(ctx, logger, client, allocationsInfo, *namespace, splitCommand); err != nil {
 		cancel()
 
 		log.Fatalf("failed to sequentially execute command on allocations: %v", err)
@@ -110,7 +116,7 @@ func main() { // nolint: cyclop, funlen
 	log.Infof("command `%s` ran successfully on %d allocations sequentially", *cmd, nbAllocs)
 }
 
-func executeSequentially(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string) error {
+func executeSequentially(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, namespace string, cmd []string) error {
 	for _, allocInfo := range allocsInfo {
 		select {
 		case <-ctx.Done():
@@ -121,13 +127,14 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
 				"group_id":      allocInfo.alloc.TaskGroup,
+				"namespace":     namespace,
 			})
 
 			allocInfo := allocInfo
 
 			logger.Info("executing command")
 
-			output, err := allocationExec(ctx, c, allocInfo, cmd)
+			output, err := allocationExec(ctx, c, allocInfo, namespace, cmd)
 			if err != nil {
 				return fmt.Errorf("failed to execute command: %w", err)
 			}
@@ -147,7 +154,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 	return nil
 }
 
-func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, cmd []string, concurrency int) error { // nolint: funlen
+func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, namespace string, cmd []string, concurrency int) error { // nolint: funlen
 	nbAllocs := len(allocsInfo)
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
@@ -184,13 +191,14 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
 				"group_id":      allocInfo.alloc.TaskGroup,
+				"namespace":     namespace,
 			})
 
 			eg.Go(func() error {
 				logger.Info("executing command")
 				defer logger.Info("command executed")
 
-				output, err := allocationExec(ctx, c, allocInfo, cmd)
+				output, err := allocationExec(ctx, c, allocInfo, namespace, cmd)
 				if err != nil {
 					return err
 				}
@@ -245,9 +253,9 @@ func consumeExecOutput(out *execOutput) error {
 }
 
 type client interface {
-	jobAllocations(jobID string) ([]*api.AllocationListStub, error)
-	allocationInfo(allocID string) (*api.Allocation, error)
-	allocationExec(ctx context.Context, alloc *api.Allocation, task string, cmd []string) (*execOutput, error)
+	jobAllocations(jobID, namespace string) ([]*api.AllocationListStub, error)
+	allocationInfo(allocID, namespace string) (*api.Allocation, error)
+	allocationExec(ctx context.Context, alloc *api.Allocation, task, namespace string, cmd []string) (*execOutput, error)
 }
 
 type allocInfo struct {
@@ -255,8 +263,8 @@ type allocInfo struct {
 	task  string
 }
 
-func getAllocationsInfo(c client, jobID, taskID string) ([]*allocInfo, error) {
-	allocations, err := c.jobAllocations(jobID)
+func getAllocationsInfo(c client, jobID, taskID, namespace string) ([]*allocInfo, error) {
+	allocations, err := c.jobAllocations(jobID, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the list of allocations for job %s: %w", jobID, err)
 	}
@@ -267,7 +275,7 @@ func getAllocationsInfo(c client, jobID, taskID string) ([]*allocInfo, error) {
 			continue
 		}
 
-		alloc, err := c.allocationInfo(alloc.ID)
+		alloc, err := c.allocationInfo(alloc.ID, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve allocation %s info: %w", alloc.ID, err)
 		}
@@ -339,8 +347,8 @@ func getAllTasks(alloc *api.Allocation) ([]string, error) {
 	return res, nil
 }
 
-func allocationExec(ctx context.Context, c client, allocInfo *allocInfo, cmd []string) (*execOutput, error) {
-	return c.allocationExec(ctx, allocInfo.alloc, allocInfo.task, cmd)
+func allocationExec(ctx context.Context, c client, allocInfo *allocInfo, namespace string, cmd []string) (*execOutput, error) {
+	return c.allocationExec(ctx, allocInfo.alloc, allocInfo.task, namespace, cmd)
 }
 
 func contains(tasks []string, task string) bool {

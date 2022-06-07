@@ -18,6 +18,7 @@ func Test_allocationExec(t *testing.T) {
 			alloc: allocs["alloc-1"],
 			task:  "task-1",
 		},
+		"foo",
 		[]string{"ls"},
 	)
 	require.NoError(t, err)

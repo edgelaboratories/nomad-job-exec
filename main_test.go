@@ -14,7 +14,7 @@ func Test_getAllocationsInfo(t *testing.T) {
 	t.Parallel()
 
 	// Target first task of first task group
-	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-11")
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-11", "foo")
 	require.NoError(t, err)
 
 	require.Len(t, info, 1)
@@ -22,7 +22,7 @@ func Test_getAllocationsInfo(t *testing.T) {
 	assert.Equal(t, "task-11", info[0].task)
 
 	// Target second task of first task group
-	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-12")
+	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-12", "foo")
 	require.NoError(t, err)
 
 	require.Len(t, info, 1)
@@ -30,7 +30,7 @@ func Test_getAllocationsInfo(t *testing.T) {
 	assert.Equal(t, "task-12", info[0].task)
 
 	// Target first task of second task group
-	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	info, err = getAllocationsInfo(&mockClient{}, "job-1", "task-21", "foo")
 	require.NoError(t, err)
 
 	require.Len(t, info, 2)
@@ -44,14 +44,14 @@ func Test_getAllocationsInfo(t *testing.T) {
 func Test_getAllocationsInfo_FailWhenTaskIsAmbiguous(t *testing.T) {
 	t.Parallel()
 
-	_, err := getAllocationsInfo(&mockClient{}, "job-1", "")
+	_, err := getAllocationsInfo(&mockClient{}, "job-1", "", "foo")
 	require.Error(t, err)
 }
 
 func Test_getAllocationsInfo_FilterOnTask(t *testing.T) {
 	t.Parallel()
 
-	info, err := getAllocationsInfo(&mockClient{}, "job-1", "inexistant-task")
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "inexistant-task", "foo")
 	require.NoError(t, err)
 
 	assert.Len(t, info, 0)
@@ -124,7 +124,7 @@ func Test_getTaskName_MultipleTasks(t *testing.T) {
 func Test_executeSequentially(t *testing.T) {
 	t.Parallel()
 
-	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21", "foo")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -133,6 +133,7 @@ func Test_executeSequentially(t *testing.T) {
 		log.WithField("test", true),
 		&mockClient{},
 		info,
+		"foo",
 		[]string{"ls"},
 	))
 }
@@ -140,7 +141,7 @@ func Test_executeSequentially(t *testing.T) {
 func Test_executeSequentially_Failure(t *testing.T) {
 	t.Parallel()
 
-	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21", "foo")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -151,6 +152,7 @@ func Test_executeSequentially_Failure(t *testing.T) {
 			failExec: true,
 		},
 		info,
+		"foo",
 		[]string{"ls"},
 	))
 }
@@ -158,7 +160,7 @@ func Test_executeSequentially_Failure(t *testing.T) {
 func Test_executeConcurrently(t *testing.T) {
 	t.Parallel()
 
-	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21", "foo")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -167,6 +169,7 @@ func Test_executeConcurrently(t *testing.T) {
 		log.WithField("test", true),
 		&mockClient{},
 		info,
+		"foo",
 		[]string{"ls"},
 		5,
 	))
@@ -175,7 +178,7 @@ func Test_executeConcurrently(t *testing.T) {
 func Test_executeConcurrently_Failure(t *testing.T) {
 	t.Parallel()
 
-	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21")
+	info, err := getAllocationsInfo(&mockClient{}, "job-1", "task-21", "foo")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -186,6 +189,7 @@ func Test_executeConcurrently_Failure(t *testing.T) {
 			failExec: true,
 		},
 		info,
+		"foo",
 		[]string{"ls"},
 		5,
 	))
