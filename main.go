@@ -84,7 +84,8 @@ func main() { // nolint: cyclop, funlen
 	}
 
 	logger := log.WithFields(log.Fields{
-		"job_id": *jobID,
+		"job_id":    *jobID,
+		"namespace": *namespace,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
@@ -126,6 +127,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
 				"group_id":      allocInfo.alloc.TaskGroup,
+				"namespace":     namespace,
 			})
 
 			allocInfo := allocInfo
@@ -189,6 +191,7 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 				"allocation_id": allocInfo.alloc.ID,
 				"task_id":       allocInfo.task,
 				"group_id":      allocInfo.alloc.TaskGroup,
+				"namespace":     namespace,
 			})
 
 			eg.Go(func() error {
