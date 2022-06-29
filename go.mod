@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20210909151918-d87324d68aa0
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.5
+	github.com/stretchr/testify v1.8.0
 )
 
 require (
