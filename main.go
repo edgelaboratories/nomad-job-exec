@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func main() { // nolint: cyclop, funlen
+func main() { //nolint: cyclop, funlen
 	jobID := flag.String("job", "", "Job ID")
 	taskID := flag.String("task", "", "Task ID")
 	namespace := flag.String("namespace", "default", "Namespace")
@@ -154,7 +154,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 	return nil
 }
 
-func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, namespace string, cmd []string, concurrency int) error { // nolint: funlen
+func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, namespace string, cmd []string, concurrency int) error { //nolint: funlen
 	nbAllocs := len(allocsInfo)
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
