@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/hashicorp/nomad/api v0.0.0-20230313220017-a42a33fa6b22
+	github.com/hashicorp/nomad/api v0.0.0-20230315164715-e4963b9c5360
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
