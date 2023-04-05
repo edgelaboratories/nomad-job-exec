@@ -66,6 +66,8 @@ github.com/hashicorp/nomad/api v0.0.0-20230403152113-6b64b208f5ce h1:s7ibtpbAiwI
 github.com/hashicorp/nomad/api v0.0.0-20230403152113-6b64b208f5ce/go.mod h1:2TCrNvonL09r7EiQ6M2rNt+Cmjbn1QbzchFoTWJFpj4=
 github.com/hashicorp/nomad/api v0.0.0-20230404094227-4848bfadec59 h1:YvHEWFtnu/pgjjrhvgvzOIAjaWUEpmIsfefivN2KKWE=
 github.com/hashicorp/nomad/api v0.0.0-20230404094227-4848bfadec59/go.mod h1:2TCrNvonL09r7EiQ6M2rNt+Cmjbn1QbzchFoTWJFpj4=
+github.com/hashicorp/nomad/api v0.0.0-20230404161710-ed80d70fa4de h1:3d2EqjcFqLcFDNn2VXK2taT2UW70fIscPUEq+fxrnTM=
+github.com/hashicorp/nomad/api v0.0.0-20230404161710-ed80d70fa4de/go.mod h1:2TCrNvonL09r7EiQ6M2rNt+Cmjbn1QbzchFoTWJFpj4=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
