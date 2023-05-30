@@ -6,7 +6,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/hashicorp/nomad/api v0.0.0-20230530070532-91a434fdfc15
 	github.com/neilotoole/errgroup v0.1.6
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.2
 	github.com/stretchr/testify v1.8.4
 )
 
