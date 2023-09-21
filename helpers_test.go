@@ -61,7 +61,7 @@ type mockClient struct {
 
 func (c *mockClient) jobAllocations(jobID, namespace string) ([]*api.AllocationListStub, error) {
 	if jobID != *job.ID {
-		return nil, fmt.Errorf("failed to get allocatins for job %s", jobID)
+		return nil, fmt.Errorf("failed to get allocatins for job %s.%s", namespace, jobID)
 	}
 
 	res := []*api.AllocationListStub{}
@@ -82,13 +82,13 @@ func stubFromAlloc(alloc *api.Allocation) *api.AllocationListStub {
 func (c *mockClient) allocationInfo(allocID, namespace string) (*api.Allocation, error) {
 	alloc, ok := allocs[allocID]
 	if !ok {
-		return nil, fmt.Errorf("failed to find allocation info for %s", allocID)
+		return nil, fmt.Errorf("failed to find allocation info for %s.%s", namespace, allocID)
 	}
 
 	return alloc, nil
 }
 
-func (c *mockClient) allocationExec(ctx context.Context, alloc *api.Allocation, task, namespace string, cmd []string) (*execOutput, error) {
+func (c *mockClient) allocationExec(_ context.Context, alloc *api.Allocation, _, _ string, _ []string) (*execOutput, error) {
 	if c.failExec {
 		return &execOutput{
 			allocID:  alloc.ID,

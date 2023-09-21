@@ -1,14 +1,20 @@
 linters:
   enable-all: true
   disable:
+    - deadcode
+    - depguard
     - exhaustivestruct
     - exhaustruct
     - goerr113
     - golint
+    - ifshort
     - interfacer
     - lll
     - maligned
+    - nosnakecase
     - scopelint
+    - structcheck
+    - varcheck
     - varnamelen
     - wrapcheck
     - wsl
