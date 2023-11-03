@@ -26,6 +26,8 @@ github.com/hashicorp/nomad/api v0.0.0-20230821200924-14a38bee7bc4 h1:Dv0GjoKaTrT
 github.com/hashicorp/nomad/api v0.0.0-20230821200924-14a38bee7bc4/go.mod h1:glQSmiY2VCQDT0MBiWKr5YDU9PpwVNOcrovlDczoKoI=
 github.com/hashicorp/nomad/api v0.0.0-20231002072535-ccafb946452c h1:jcD3wIq9UfFFuBHb/6dmI6B6LpXgvoBYBUNPawQGybc=
 github.com/hashicorp/nomad/api v0.0.0-20231002072535-ccafb946452c/go.mod h1:glQSmiY2VCQDT0MBiWKr5YDU9PpwVNOcrovlDczoKoI=
+github.com/hashicorp/nomad/api v0.0.0-20231102205237-1604dba508b2 h1:1omjFjEAEsCANiMrvTer2VEzB5BwTqeVFSFzLV999Wc=
+github.com/hashicorp/nomad/api v0.0.0-20231102205237-1604dba508b2/go.mod h1:glQSmiY2VCQDT0MBiWKr5YDU9PpwVNOcrovlDczoKoI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
