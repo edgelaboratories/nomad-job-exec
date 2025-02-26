@@ -1,3 +1,4 @@
+version: 2
 before:
   hooks:
     - go mod download
@@ -10,23 +11,17 @@ builds:
       - darwin
 archives:
   - id: binary
-    format: binary
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      386: i386
-      amd64: x86_64
-  - format: zip
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+    formats: ['binary', 'zip']
+    name_template: >-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "darwin" }}Darwin
+      {{- else if eq .Arch "linux" }}Linux
+      {{- else }}{{ .Arch }}{{ end }}
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
