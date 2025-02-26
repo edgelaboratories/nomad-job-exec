@@ -12,9 +12,6 @@ builds:
 dockers:
   - image_templates:
     - "edgelab/nomad-job-exec:{{ .Tag }}"
-    extra_files:
-    - bin/nomad-job-exec
-  - skip_push: true # testing
 archives:
   - id: binary
     formats: ['binary', 'zip']
