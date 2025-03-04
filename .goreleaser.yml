@@ -1,3 +1,4 @@
+version: 2
 before:
   hooks:
     - go mod download
@@ -8,25 +9,23 @@ builds:
       - linux
       - windows
       - darwin
+dockers:
+  - image_templates:
+    - "edgelab/nomad-job-exec:{{ .Tag }}"
 archives:
   - id: binary
-    format: binary
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      386: i386
-      amd64: x86_64
-  - format: zip
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+    formats: ['binary', 'zip']
+    name_template: >-
+      {{- .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end -}}
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
