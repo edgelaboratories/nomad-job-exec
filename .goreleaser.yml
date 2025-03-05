@@ -11,7 +11,7 @@ builds:
       - darwin
 dockers:
   - image_templates:
-    - "edgelab/nomad-job-exec:{{ .Tag }}"
+    - "ghcr.io/edgelaboratories/nomad-job-exec:{{ .Tag }}"
 archives:
   - id: binary
     formats: ['binary', 'zip']
