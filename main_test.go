@@ -54,7 +54,7 @@ func Test_getAllocationsInfo_FilterOnTask(t *testing.T) {
 	info, err := getAllocationsInfo(&mockClient{}, "job-1", "inexistant-task", "foo")
 	require.NoError(t, err)
 
-	assert.Len(t, info, 0)
+	assert.Empty(t, info)
 }
 
 func Test_getTaskName(t *testing.T) {
