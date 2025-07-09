@@ -39,6 +39,14 @@ github.com/hashicorp/nomad/api v0.0.0-20250624073110-27da75044ed0 h1:e0p7lzvqapR
 github.com/hashicorp/nomad/api v0.0.0-20250624073110-27da75044ed0/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
 github.com/hashicorp/nomad/api v0.0.0-20250626153726-0c2fcb3e3068 h1:yO+KBVnZMBt7sW1X6rpe3CPVeOIMtmAvGPVIs03xl70=
 github.com/hashicorp/nomad/api v0.0.0-20250626153726-0c2fcb3e3068/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
+github.com/hashicorp/nomad/api v0.0.0-20250630213223-63f07887479f h1:GOuRFbZHK5OfOFLZdBpv5uBVYFAFlYLClnUIQliV4z8=
+github.com/hashicorp/nomad/api v0.0.0-20250630213223-63f07887479f/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
+github.com/hashicorp/nomad/api v0.0.0-20250701225403-493e7b2faadc h1:R3CPSd1kd6oNKrasEZ84rVBDexkzwb/pkR6hr7e0FDY=
+github.com/hashicorp/nomad/api v0.0.0-20250701225403-493e7b2faadc/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
+github.com/hashicorp/nomad/api v0.0.0-20250707184806-e13ceab85553 h1:mw+ZcExnrFymZypXuu7omEhgTUiBGf2qkETwigBpnZk=
+github.com/hashicorp/nomad/api v0.0.0-20250707184806-e13ceab85553/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
+github.com/hashicorp/nomad/api v0.0.0-20250709002452-53b083b8c5e0 h1:Go9VjiRdSqrWmWitEhXSk8pzcKc3XoU9VvjcguRIpkQ=
+github.com/hashicorp/nomad/api v0.0.0-20250709002452-53b083b8c5e0/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
