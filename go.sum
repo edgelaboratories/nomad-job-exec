@@ -47,6 +47,8 @@ github.com/hashicorp/nomad/api v0.0.0-20250707184806-e13ceab85553 h1:mw+ZcExnrFy
 github.com/hashicorp/nomad/api v0.0.0-20250707184806-e13ceab85553/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
 github.com/hashicorp/nomad/api v0.0.0-20250709002452-53b083b8c5e0 h1:Go9VjiRdSqrWmWitEhXSk8pzcKc3XoU9VvjcguRIpkQ=
 github.com/hashicorp/nomad/api v0.0.0-20250709002452-53b083b8c5e0/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
+github.com/hashicorp/nomad/api v0.0.0-20250711190106-b23ab5ac157e h1:YVnN20hNBs6v08PAorU8vci71xlwIzoBj1WOnlG4qCc=
+github.com/hashicorp/nomad/api v0.0.0-20250711190106-b23ab5ac157e/go.mod h1:y4olHzVXiQolzyk6QD/gqJxQTnnchlTf/QtczFFKwOI=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
