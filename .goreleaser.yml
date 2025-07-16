@@ -1,4 +1,5 @@
 version: 2
+project_name: nomad-job-exec
 before:
   hooks:
     - go mod download
@@ -10,8 +11,34 @@ builds:
       - windows
       - darwin
 dockers:
-  - image_templates:
-    - "ghcr.io/edgelaboratories/nomad-job-exec:{{ .Tag }}"
+  - use: buildx
+    image_templates:
+    - "ghcr.io/edgelaboratories/{{ .ProjectName }}:{{ .Tag }}-amd64"
+    build_flag_templates:
+      - "--pull"
+      - "--sbom=true"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/amd64"
+  - use: buildx
+    image_templates:
+    - "ghcr.io/edgelaboratories/{{ .ProjectName }}:{{ .Tag }}-arm64"
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/arm64"
+docker_manifests:
+  - name_template: "ghcr.io/edgelaboratories/{{ .ProjectName }}:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/edgelaboratories/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "ghcr.io/edgelaboratories/{{ .ProjectName }}:{{ .Tag }}-arm64"
 archives:
   - id: binary
     formats: ['binary', 'zip']
