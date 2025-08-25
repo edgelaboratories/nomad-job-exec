@@ -6,7 +6,7 @@ toolchain go1.25.0
 
 require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/hashicorp/nomad/api v0.0.0-20250821232935-f6a078c7e5c7
+	github.com/hashicorp/nomad/api v0.0.0-20250822210455-33a72c2d01eb
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.0
