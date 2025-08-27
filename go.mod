@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20250822210455-33a72c2d01eb
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
