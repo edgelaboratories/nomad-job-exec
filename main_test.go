@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/hashicorp/nomad/api"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,7 +130,7 @@ func Test_executeSequentially(t *testing.T) {
 	ctx := context.Background()
 	assert.NoError(t, executeSequentially(
 		ctx,
-		log.WithField("test", true),
+		slog.Default().With(slog.Bool("test", true)),
 		&mockClient{},
 		info,
 		"foo",
@@ -147,7 +147,7 @@ func Test_executeSequentially_Failure(t *testing.T) {
 	ctx := context.Background()
 	assert.Error(t, executeSequentially(
 		ctx,
-		log.WithField("test", true),
+		slog.Default().With(slog.Bool("test", true)),
 		&mockClient{
 			failExec: true,
 		},
@@ -166,7 +166,7 @@ func Test_executeConcurrently(t *testing.T) {
 	ctx := context.Background()
 	assert.NoError(t, executeConcurrently(
 		ctx,
-		log.WithField("test", true),
+		slog.Default().With(slog.Bool("test", true)),
 		&mockClient{},
 		info,
 		"foo",
@@ -184,7 +184,7 @@ func Test_executeConcurrently_Failure(t *testing.T) {
 	ctx := context.Background()
 	assert.Error(t, executeConcurrently(
 		ctx,
-		log.WithField("test", true),
+		slog.Default().With(slog.Bool("test", true)),
 		&mockClient{
 			failExec: true,
 		},

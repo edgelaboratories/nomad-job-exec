@@ -6,13 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/google/shlex"
 	"github.com/hashicorp/nomad/api"
 	"github.com/neilotoole/errgroup"
-	log "github.com/sirupsen/logrus"
 )
 
 func main() { //nolint: cyclop, funlen
@@ -27,17 +28,25 @@ func main() { //nolint: cyclop, funlen
 
 	// Configure logger
 
-	level, err := log.ParseLevel(*logLevel)
+	debug := slog.Level(0)
+	err := debug.UnmarshalText([]byte(*logLevel))
 	if err != nil {
 		log.Fatalf("failed to parse log level: %v", err)
 	}
-	log.SetLevel(level)
-	log.SetOutput(os.Stdout)
+
+	lvl := new(slog.LevelVar)
+	lvl.Set(debug)
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: lvl,
+	}))
+	slog.SetDefault(logger)
 
 	// Check inputs
 
 	if *jobID == "" {
-		log.Fatal("job ID cannot be empty")
+		slog.Error("job ID cannot be empty")
+		os.Exit(1)
 	}
 
 	if ns, ok := os.LookupEnv("NOMAD_NAMESPACE"); ok {
@@ -46,12 +55,14 @@ func main() { //nolint: cyclop, funlen
 
 	splitCommand, err := shlex.Split(*cmd)
 	if err != nil {
-		log.Fatalf("failed to shlex the input command: %v", err)
+		slog.Error("failed to shlex the input", "command", cmd, "error", err)
+		os.Exit(1)
 	}
 
 	timeoutDuration, err := time.ParseDuration(*timeout)
 	if err != nil {
-		log.Fatalf("failed to parse the timeout duration: %v", err)
+		slog.Error("failed to parse the timeout duration", "error", err)
+		os.Exit(1)
 	}
 
 	// Create Nomad API client
@@ -62,7 +73,8 @@ func main() { //nolint: cyclop, funlen
 		TLSConfig: &api.TLSConfig{},
 	})
 	if err != nil {
-		log.Fatalf("failed to create the Nomad API client: %v", err)
+		slog.Error("failed to create the Nomad API client", "error", err)
+		os.Exit(1)
 	}
 
 	client := &apiClientWrap{
@@ -71,64 +83,67 @@ func main() { //nolint: cyclop, funlen
 
 	// Get the information about the job's running allocations
 
-	log.Infof("listing all allocations for job %s (%s)", *jobID, *namespace)
+	jobLogger := logger.With(
+		slog.String("job_id", *jobID),
+		slog.String("namespace", *namespace),
+	)
+
+	jobLogger.Info("listing all allocations for job")
 
 	allocationsInfo, err := getAllocationsInfo(client, *jobID, *taskID, *namespace)
 	if err != nil {
-		log.Fatalf("failed to get the list of allocations: %v", err)
+		slog.Error("failed to get the list of allocations", "error", err)
+		os.Exit(1)
 	}
 
 	nbAllocs := len(allocationsInfo)
 	if nbAllocs == 0 {
-		log.Fatalf("no allocations found for job %q (%s)", *jobID, *namespace)
+		jobLogger.Error("no allocations found for job")
+		os.Exit(1)
 	}
-
-	logger := log.WithFields(log.Fields{
-		"job_id":    *jobID,
-		"namespace": *namespace,
-	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 
 	if *parallel {
 		concurrency := nbAllocs
 
-		log.Infof("running command `%s` on %d allocations with concurrency %d", *cmd, nbAllocs, concurrency)
+		slog.Info("running command", "command", *cmd, "allocations", nbAllocs, "concurrency", concurrency)
 
-		if err := executeConcurrently(ctx, logger, client, allocationsInfo, *namespace, splitCommand, concurrency); err != nil {
+		if err := executeConcurrently(ctx, jobLogger, client, allocationsInfo, *namespace, splitCommand, concurrency); err != nil {
 			cancel()
 
-			log.Fatalf("failed to concurrently execute command on allocations: %v", err)
+			slog.Error("failed to concurrently execute command on allocations", "error", err)
+			os.Exit(1)
 		}
 
-		log.Infof("command `%s` ran successfully on %d allocations with concurrency %d", *cmd, nbAllocs, concurrency)
+		slog.Info("command ran successfully", "command", *cmd, "allocations", nbAllocs, "concurrency", concurrency)
 		os.Exit(0)
 	}
 
-	log.Infof("running command `%s` sequentially on %d allocations", *cmd, nbAllocs)
+	slog.Info("running command", "command", *cmd, "allocations", nbAllocs, "concurrency", 1)
 
-	if err := executeSequentially(ctx, logger, client, allocationsInfo, *namespace, splitCommand); err != nil {
+	if err := executeSequentially(ctx, jobLogger, client, allocationsInfo, *namespace, splitCommand); err != nil {
 		cancel()
 
-		log.Fatalf("failed to sequentially execute command on allocations: %v", err)
+		slog.Error("failed to sequentially execute command on allocations", "error", err)
+		os.Exit(1)
 	}
 
-	log.Infof("command `%s` ran successfully on %d allocations sequentially", *cmd, nbAllocs)
+	slog.Info("command ran successfully", "command", *cmd, "allocations", nbAllocs, "concurrency", 1)
 }
 
-func executeSequentially(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, namespace string, cmd []string) error {
+func executeSequentially(ctx context.Context, logger *slog.Logger, c client, allocsInfo []*allocInfo, namespace string, cmd []string) error {
 	for _, allocInfo := range allocsInfo {
 		select {
 		case <-ctx.Done():
 			break
 
 		default:
-			logger := logger.WithFields(log.Fields{
-				"allocation_id": allocInfo.alloc.ID,
-				"task_id":       allocInfo.task,
-				"group_id":      allocInfo.alloc.TaskGroup,
-				"namespace":     namespace,
-			})
+			logger := logger.With(
+				slog.String("allocation_id", allocInfo.alloc.ID),
+				slog.String("task_id", allocInfo.task),
+				slog.String("group_id", allocInfo.alloc.TaskGroup),
+			)
 
 			allocInfo := allocInfo
 
@@ -154,7 +169,7 @@ func executeSequentially(ctx context.Context, logger *log.Entry, c client, alloc
 	return nil
 }
 
-func executeConcurrently(ctx context.Context, logger *log.Entry, c client, allocsInfo []*allocInfo, namespace string, cmd []string, concurrency int) error { //nolint: funlen
+func executeConcurrently(ctx context.Context, logger *slog.Logger, c client, allocsInfo []*allocInfo, namespace string, cmd []string, concurrency int) error { //nolint: funlen
 	nbAllocs := len(allocsInfo)
 
 	execOutputCh := make(chan *execOutput, nbAllocs)
@@ -168,7 +183,7 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 
 		for output := range execOutputCh {
 			if err := consumeExecOutput(output); err != nil {
-				log.Errorf("failed to consume command output: %v", err)
+				logger.Error("failed to consume command output", "error", err)
 			}
 
 			if output.exitCode != 0 {
@@ -187,12 +202,11 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 		default:
 			allocInfo := allocInfo
 
-			logger := logger.WithFields(log.Fields{
-				"allocation_id": allocInfo.alloc.ID,
-				"task_id":       allocInfo.task,
-				"group_id":      allocInfo.alloc.TaskGroup,
-				"namespace":     namespace,
-			})
+			logger := logger.With(
+				slog.String("allocation_id", allocInfo.alloc.ID),
+				slog.String("task_id", allocInfo.task),
+				slog.String("group_id", allocInfo.alloc.TaskGroup),
+			)
 
 			eg.Go(func() error {
 				logger.Info("executing command")
@@ -225,7 +239,7 @@ func executeConcurrently(ctx context.Context, logger *log.Entry, c client, alloc
 }
 
 func consumeExecOutput(out *execOutput) error {
-	logger := log.WithField("allocation_id", out.allocID)
+	logger := slog.With(slog.String("allocation_id", out.allocID))
 
 	if len(out.stderr) != 0 {
 		logger.Debug("flushing command output to stderr")
