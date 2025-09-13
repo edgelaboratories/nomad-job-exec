@@ -6,7 +6,7 @@ toolchain go1.25.1
 
 require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/hashicorp/nomad/api v0.0.0-20250905185308-0e9eb5ae43fd
+	github.com/hashicorp/nomad/api v0.0.0-20250912204011-10be73c081dc
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/stretchr/testify v1.11.1
 )
@@ -15,7 +15,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/hashicorp/cronexpr v1.1.2 // indirect
+	github.com/hashicorp/cronexpr v1.1.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
