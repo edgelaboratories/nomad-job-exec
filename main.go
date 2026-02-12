@@ -9,7 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"slice"
+	"slices"
 	"time"
 
 	"github.com/google/shlex"
@@ -304,7 +304,7 @@ func getAllocationsInfo(c client, jobID, taskID, namespace string) ([]*allocInfo
 				return nil, fmt.Errorf("failed to retrieve tasks for allocation %s", alloc.ID)
 			}
 
-			if slice.Contains(tasks, taskID) {
+			if slices.Contains(tasks, taskID) {
 				res = append(res, &allocInfo{
 					alloc: alloc,
 					task:  taskID,
