@@ -194,13 +194,3 @@ func Test_executeConcurrently_Failure(t *testing.T) {
 		5,
 	))
 }
-
-func Test_contains(t *testing.T) {
-	t.Parallel()
-
-	c := []string{"alpha", "beta"}
-
-	assert.True(t, contains(c, "alpha"))
-	assert.True(t, contains(c, "beta"))
-	assert.False(t, contains(c, "gamma"))
-}
